@@ -15,32 +15,31 @@ function checkIfCommandExist {
 # Detect Linux name and version.
 # Return osname and osversion
 function getOSVersion {
-  if [ -f "/etc/os-release" ]; then
-    ##Ubuntu, Debian, Lubuntu...
-    osname=`cat /etc/os-release | sed -n 's/^ID=// p'`
-    osversion=`cat /etc/os-release | sed -n -r 's/^VERSION_ID="(.*)"$/\1/ p'`
-    return
-  fi
 
-  if [ -f "/etc/system-release" ]; then
-    sysrelease=`cat /etc/system-release`
+if [ -f "/etc/os-release" ]; then
+    ##Ubuntu, Debian, Lubuntu...
+  osname=`cat /etc/os-release | sed -n 's/^ID=// p'`
+  osversion=`cat /etc/os-release | sed -n -r 's/^VERSION_ID="(.*)"$/\1/ p'`
+  if [[ $osname == "fedora" ]]; then
+        osversion=`rpm -q --qf "%{VERSION}" fedora-release`
+  fi
+  return 
+fi
+
+if [ -f "/etc/system-release" ]; then
+  sysrelease=`cat /etc/system-release`
     ## CentOS
-    if [[ $sysrelease == CentOS* ]]; then        
+  if [[ $sysrelease == CentOS* ]]; then        
       ##https://www.centos.org/forums/viewtopic.php?t=488
-      osversion=`rpm -q --qf "%{VERSION}" $(rpm -q --whatprovides redhat-release)`
-      osname="centos"      
+    osversion=`rpm -q --qf "%{VERSION}" $(rpm -q --whatprovides redhat-release)`
+    osname="centos"      
       return
-    fi
-    ## Fedora
-    if [[ $sysrelease == Fedora* ]]; then
-      osversion=`rpm -q --qf "%{VERSION}" fedora-release`
-      osname="fedora"
-      return
-    fi
-  else
+  fi
+else
     echo "Sorry my script only supports CentOS, Ubuntu, Debian and Fedora"
     exit
-  fi
+fi
+
 }
 
 function install {
