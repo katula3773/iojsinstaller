@@ -20,7 +20,7 @@ if [ -f "/etc/os-release" ]; then
     ##Ubuntu, Debian, Lubuntu...
   osname=`cat /etc/os-release | sed -n 's/^ID=// p'`
   #osversion=`cat /etc/os-release | sed -n -r 's/^VERSION_ID="(.*)"$/\1/ p'`
-  osversion=`cat /etc/os-release | sed -n -r 's/^VERSION_ID="(.*)"$/\1/ p' | sed 's/\.//g'`
+  osversion=`cat /etc/os-release | sed -n -r 's/^VERSION_ID="(.*)"$/\1/ p'`
   if [[ $osname == "fedora" ]]; then
         osversion=`rpm -q --qf "%{VERSION}" fedora-release`
   fi
