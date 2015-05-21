@@ -13,47 +13,34 @@ function checkIfCommandExist {
 }
 
 # Detect Linux name and version.
+# Return osname and osversion
 function getOSVersion {
-  if [ -f "/etc/os-release" ]; then
-    ##It is likely Ubuntu
-    osname=`cat /etc/os-release | grep ID= | head -1 | sed 's/\"//g'`
-    osname=${osname:3}                                 
-    osversion=`cat /etc/os-release | grep VERSION_ID= | head -1 |  sed 's/\"//g'`
-    osversion=${osversion:11}
-    osname=$osname$osversion
-    return
-  fi
 
-  if [ -f "/etc/system-release" ]; then
-    sysrelease=`cat /etc/system-release`
+if [ -f "/etc/os-release" ]; then
+    ##Ubuntu, Debian, Lubuntu...
+  osname=`cat /etc/os-release | sed -n 's/^ID=// p'`
+  #osversion=`cat /etc/os-release | sed -n -r 's/^VERSION_ID="(.*)"$/\1/ p'`
+  osversion=`cat /etc/os-release | sed -n -r 's/^VERSION_ID="(.*)"$/\1/ p' | sed 's/\.//g'`
+  if [[ $osname == "fedora" ]]; then
+        osversion=`rpm -q --qf "%{VERSION}" fedora-release`
+  fi
+  return
+fi
+
+if [ -f "/etc/system-release" ]; then
+  sysrelease=`cat /etc/system-release`
     ## CentOS
-    if [[ $sysrelease == CentOS* ]]; then        
+  if [[ $sysrelease == CentOS* ]]; then
       ##https://www.centos.org/forums/viewtopic.php?t=488
-      osversion=`rpm -q --qf "%{VERSION}" $(rpm -q --whatprovides redhat-release)`
-      osname="centos$osversion"      
+    osversion=`rpm -q --qf "%{VERSION}" $(rpm -q --whatprovides redhat-release)`
+    osname="centos"
       return
-    fi
-    ## Fedora
-    if [[ $sysrelease == Fedora* ]]; then
-      osversion=`rpm -q --qf "%{VERSION}" fedora-release`
-      osname="fedora$osversion"
-      return
-    fi
-  else
-    echo "Sorry my script only supports CentOS, Ubuntu and Fedora"
+  fi
+else
+    echo "Sorry my script only supports CentOS, Ubuntu, Debian and Fedora"
     exit
-  fi
+fi
 
-  #  Ubuntu
-  ubuntu_Cmd=`lsb_release -a`
-  if [ "${ubuntu_Cmd}" != "" ] ;then
-    ID=`"${ubuntu_Cmd}"|grep ID| awk '{print $3}'`
-    Release=`lsb_release -a|grep Release| awk '{print $2}'`
-    osname="$ID"
-    echo -n "$osname"
-  else
-    echo -n ""
-  fi
 }
 
 function install {
@@ -62,13 +49,16 @@ function install {
       exit
   fi
   case "$osname" in
-  Ubuntu)
-    apt-get install  $1
+  ubuntu)
+    apt-get -q -y install  $1
     ;;
-  centos6)
-    yum -y install $1
+  debian)
+    apt-get -q -y install $1
     ;;
-  centos7)
+  linuxmint)
+    apt-get -q -y install $1
+    ;;
+  centos)
     yum -y install $1
     ;;
   fedora)
@@ -76,7 +66,7 @@ function install {
     ;;
   esac
 }
-###################### MAIN LOGIC#################
+
 
 ## Make sure user runs this bash script as root
 if [ $(id -u) -ne 0 ]; then
@@ -87,7 +77,7 @@ fi
 
 echo "Download and install iojs"
 getOSVersion
-
+echo "OS: $osname"
 # install curl if it does not exist
 if [ $(checkIfCommandExist curl) -eq 0 ]; then
    install curl
@@ -97,18 +87,7 @@ fi
 if [ -z "$1" ]
 then
   echo 'Get iojs version from https://iojs.org'
-  #Extract latest version iojs from iojs.org
-  temp=`curl -sL https://iojs.org/en/index.html |
-  grep -Eoi '<a [^>]+>' | 
-  grep https://iojs.org/dist/ | 
-  awk '{print $2}' | 
-  awk -F"/"  '{print $5}' | 
-  head -1 |
-  sed 's/^.//'`
-   iojsversion=${temp}
-  echo $iojsversion
-
-  echo "$temp"
+  iojsversion=`curl -sL https://iojs.org/en/index.html | sed -nre 's/.*\/v([0-9]*\.[0-9]*\.[0-9]*)\/.*/\1/p' | head -1`
 else
   iojsversion=$1
 fi
